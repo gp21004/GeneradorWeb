@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Documentos - MINEDUCYT Santa Ana</title>
+    
+    <link rel="icon" type="image/svg+xml" href="/static/logo.svg">
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <style>
+        body { background-color: #f0f2f5; font-family: 'Segoe UI', sans-serif; }
+        .main-container { max-width: 800px; margin-top: 50px; margin-bottom: 50px;}
+        
+        .header-section { text-align: center; margin-bottom: 30px; }
+        .header-section h1 { color: #003366; font-weight: 800; letter-spacing: -1px; }
+        .badge-status { font-size: 1rem; padding: 10px 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: all 0.4s ease; }
+        
+        .card-custom { background: white; border: none; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); padding: 20px; }
+        
+        /* PESTAÑAS */
+        .nav-pills .nav-link { color: #555; font-weight: 600; padding: 12px 25px; border-radius: 10px; transition: all 0.3s; }
+        .nav-pills .nav-link.active { background-color: #003366; color: white; box-shadow: 0 4px 12px rgba(0,51,102,0.2); }
+        .tab-content { margin-top: 25px; }
+        
+        .btn-primary { background-color: #003366; border: none; }
+        .btn-primary:hover { background-color: #002244; }
+        .btn-success { background-color: #28a745; border: none; }
+
+        /* MAYÚSCULAS */
+        .form-check-label { text-transform: uppercase; font-size: 0.95rem; }
+        textarea.form-control { text-transform: uppercase; }
+
+        /* DRAG & DROP ESCRITORIO */
+        .drag-drop-zone {
+            border: 3px dashed #ccc; border-radius: 15px; padding: 40px 20px; 
+            text-align: center; background-color: #f8f9fa; cursor: pointer;
+            transition: all 0.3s ease; color: #555; position: relative;
+        }
+        .drag-drop-zone:hover, .drag-drop-zone.drag-over {
+            border-color: #003366; background-color: #e9ecef; color: #003366;
+        }
+
+        /* MÓVIL (CROPPER) */
+        .img-container { max-height: 60vh; width: 100%; display: flex; justify-content: center; background-color: #333;}
+        .img-container img { max-width: 100%; }
+        
+        .file-upload-wrapper { position: relative; overflow: hidden; display: inline-block; width: 100%; }
+        .file-upload-wrapper input[type=file] { font-size: 100px; position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; height: 100%; }
+    </style>
+</head>
+<body>
+
+<div class="container main-container">
+    
+    <div class="header-section">
+        <h1>Generador de Documentos</h1>
+        <p class="text-secondary mb-2">Sede Departamental Santa Ana | MINEDUCYT</p>
+        
+        <div class="mt-3 mb-4" id="contenedor-badge">
+            {% if tiene_cookie %}
+                <span class="badge bg-success badge-status rounded-pill" id="badge-conexion">✅ Conexión Activa</span>
+            {% else %}
+                <span class="badge bg-danger badge-status rounded-pill" id="badge-conexion">⚠️ Sin Conexión</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card-custom">
+        <ul class="nav nav-pills nav-fill" id="pills-tab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="pills-vineta-tab" data-bs-toggle="pill" data-bs-target="#pills-vineta" type="button">📦 Viñeta de Garantía</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="pills-acta-tab" data-bs-toggle="pill" data-bs-target="#pills-acta" type="button">📄 Acta de Sustitución</button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="pills-tabContent">
+            
+            <div class="tab-pane fade show active" id="pills-vineta">
+                <form action="/procesar_vineta" method="POST" id="form-vineta">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Número de Ticket:</label>
+                        <input type="text" class="form-control form-control-lg solo-numeros" name="ticket" placeholder="Ej. 478356" required oninput="this.value = this.value.replace(/[^0-9]/g, '');">
+                    </div>
+                    <div class="mb-3"><label class="form-label fw-bold">Accesorios incluidos:</label>
+                        <div class="d-flex flex-wrap gap-3 p-3 bg-light rounded border">
+                            <div class="form-check"><input class="form-check-input" type="checkbox" name="caja" value="Caja" id="caja"><label class="form-check-label" for="caja">Caja</label></div>
+                            <div class="form-check"><input class="form-check-input" type="checkbox" name="cargador" value="Cargador" id="cargador"><label class="form-check-label" for="cargador">Cargador</label></div>
+                            <div class="form-check"><input class="form-check-input" type="checkbox" name="funda" value="Funda" id="funda"><label class="form-check-label" for="funda">Funda</label></div>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Observaciones:</label>
+                        <textarea class="form-control" name="detalle" rows="2" placeholder="DETALLE EL ESTADO DEL EQUIPO..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-lg w-100">Generar Viñeta PDF</button>
+                </form>
+            </div>
+
+            <div class="tab-pane fade" id="pills-acta">
+                <form action="/procesar_acta" method="POST" enctype="multipart/form-data" id="form-acta">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Número de Ticket:</label>
+                        <input type="text" class="form-control form-control-lg solo-numeros" name="ticket" placeholder="Ej. 478356" required oninput="this.value = this.value.replace(/[^0-9]/g, '');">
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Fotografía del DUI:</label>
+                        <div id="vista-escritorio" class="d-none d-md-block">
+                            <div class="drag-drop-zone" id="drag-drop-zone">
+                                <div id="dropzone-text">
+                                    <span style="font-size: 3rem;">📁</span><br>
+                                    <h5 class="mt-2 mb-1 fw-bold">Arrastra la imagen del DUI aquí</h5>
+                                    <p class="mb-0 text-muted">o haz clic para buscar en tus archivos</p>
+                                </div>
+                                <input type="file" id="dui_img_desktop" name="dui_img" accept="image/*" style="display: none;">
+                            </div>
+                            <p class="text-center text-muted mt-2" style="font-size: 0.85rem;">
+                                💡 Recuerda que puedes tomar la foto directamente desde tu celular iOS o Android.
+                            </p>
+                        </div>
+                        <div id="vista-movil" class="d-block d-md-none">
+                            
+                            <div id="contenedor-ios" style="display: none;">
+                                <div style="position: relative; overflow: hidden; display: block; border-radius: 8px;">
+                                    <button type="button" class="btn btn-outline-secondary btn-lg w-100 fw-bold">
+                                        <span style="font-size: 2rem; display: block;">📸 / 🖼️</span>
+                                        Tomar Foto o elegir de Galería
+                                    </button>
+                                    <input type="file" id="dui_img_ios" accept="image/*" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 2;">
+                                </div>
+                            </div>
+
+                            <div id="contenedor-android" style="display: none;">
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <div style="position: relative; overflow: hidden; border-radius: 8px;">
+                                            <button type="button" class="btn btn-outline-secondary w-100 fw-bold" style="padding: 15px 5px;">
+                                                <span style="font-size: 1.8rem; display: block;">📸</span> Cámara
+                                            </button>
+                                            <input type="file" id="dui_img_camara" accept="image/*" capture="environment" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; z-index: 2;">
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div style="position: relative; overflow: hidden; border-radius: 8px;">
+                                            <button type="button" class="btn btn-outline-secondary w-100 fw-bold" style="padding: 15px 5px;">
+                                                <span style="font-size: 1.8rem; display: block;">🖼️</span> Galería
+                                            </button>
+                                            <input type="file" id="dui_img_galeria" accept="image/*" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; z-index: 2;">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <input type="file" id="dui_img" name="dui_img" style="display: none;">
+
+                            <div id="mensaje-foto" class="form-text text-success text-center p-2 mt-2 rounded" style="display: none; font-weight: bold; font-size: 1.1rem; background-color: #eafbea; border: 2px solid #28a745;">
+                                ✅ Foto Guardada
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-success btn-lg w-100">Generar Acta PDF</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <footer class="mt-5 text-center text-muted">
+        <hr>
+        <p style="font-size: 0.8rem;" class="mb-1"><strong>MINISTERIO DE EDUCACIÓN, CIENCIA Y TECNOLOGÍA</strong></p>
+        <p style="font-size: 0.75rem;"><em>{{ creador }}</em></p>
+    </footer>
+</div>
+
+<div class="modal fade" id="recorteModal" data-bs-backdrop="static" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-dark text-white">
+        <h5 class="modal-title">Ajustar Documento (DUI)</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-0"><div class="img-container"><img id="imagen-previa" src=""></div></div>
+      <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-success" id="btn-recortar">✅ Aplicar Recorte</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
+<script>
+    // --- LÓGICA DE ACTUALIZACIÓN DE BADGE ---
+    const badge = document.getElementById('badge-conexion');
+
+    function actualizarEstadoConexion(activo) {
+        if (activo) {
+            badge.className = "badge bg-success badge-status rounded-pill";
+            badge.innerHTML = "✅ Conexión Activa";
+        } else {
+            badge.className = "badge bg-danger badge-status rounded-pill";
+            badge.innerHTML = "⚠️ Sesión Desconectada";
+        }
+    }
+
+    // --- DETECCIÓN DE SO MÓVIL ---
+    const esAndroid = /Android/i.test(navigator.userAgent);
+    const contenedorIOS = document.getElementById('contenedor-ios');
+    const contenedorAndroid = document.getElementById('contenedor-android');
+    const mensajeFoto = document.getElementById('mensaje-foto');
+
+    // --- RESPONSIVIDAD Y ESCRITORIO ---
+    const inputDesktop = document.getElementById('dui_img_desktop');
+    const inputMobile = document.getElementById('dui_img'); // Este es el input oculto final
+    const dropZone = document.getElementById('drag-drop-zone');
+    const dropzoneText = document.getElementById('dropzone-text');
+
+    function checkDevice() {
+        const isMobile = window.innerWidth < 768; 
+        inputDesktop.disabled = isMobile; inputDesktop.required = !isMobile;
+        inputMobile.disabled = !isMobile; inputMobile.required = isMobile;
+
+        // Mostrar botones de SO correcto si no hay foto lista
+        if (isMobile && inputMobile.files.length === 0) {
+            mensajeFoto.style.display = "none";
+            if (esAndroid) {
+                contenedorAndroid.style.display = 'block';
+                contenedorIOS.style.display = 'none';
+            } else {
+                contenedorIOS.style.display = 'block';
+                contenedorAndroid.style.display = 'none';
+            }
+        }
+    }
+    window.addEventListener('load', checkDevice);
+    window.addEventListener('resize', checkDevice);
+
+    dropZone.addEventListener('click', () => inputDesktop.click());
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault(); dropZone.classList.remove('drag-over');
+        if (e.dataTransfer.files.length > 0) { inputDesktop.files = e.dataTransfer.files; actualizarUIEscritorio(); }
+    });
+    inputDesktop.addEventListener('change', actualizarUIEscritorio);
+
+    function actualizarUIEscritorio() {
+        if (inputDesktop.files.length > 0) {
+            dropZone.style.borderColor = "#28a745"; dropZone.style.backgroundColor = "#eafbea"; dropZone.style.color = "#28a745";
+            dropzoneText.innerHTML = `<span>✅</span><br><b>${inputDesktop.files[0].name}</b><br><small>Archivo listo</small>`;
+        }
+    }
+
+    // --- CROPPER MÓVIL (iOS & Android integrados) ---
+    let cropper = null; 
+    const imagenPrevia = document.getElementById('imagen-previa');
+    const modalRecorte = new bootstrap.Modal(document.getElementById('recorteModal'));
+    const btnRecortar = document.getElementById('btn-recortar');
+
+    // Función universal para procesar el archivo seleccionado desde cualquier botón
+    function procesarArchivo(e) {
+        if (e.target.files.length > 0) {
+            const reader = new FileReader();
+            reader.onload = (ev) => { 
+                imagenPrevia.src = ev.target.result; 
+                modalRecorte.show(); 
+            };
+            reader.readAsDataURL(e.target.files[0]);
+            e.target.value = ""; // Limpiar input para permitir reselección de la misma foto
+        }
+    }
+
+    // Eventos para los 3 posibles botones
+    document.getElementById('dui_img_ios').addEventListener('change', procesarArchivo);
+    document.getElementById('dui_img_camara').addEventListener('change', procesarArchivo);
+    document.getElementById('dui_img_galeria').addEventListener('change', procesarArchivo);
+
+    document.getElementById('recorteModal').addEventListener('shown.bs.modal', () => {
+        if (cropper) { cropper.destroy(); }
+        cropper = new Cropper(imagenPrevia, { aspectRatio: 85.6 / 54, viewMode: 1 });
+    });
+
+    document.getElementById('recorteModal').addEventListener('hidden.bs.modal', () => {
+        if (cropper) { cropper.destroy(); cropper = null; }
+    });
+
+    btnRecortar.addEventListener('click', () => {
+        if (!cropper) return;
+        cropper.getCroppedCanvas({ width: 800 }).toBlob((blob) => {
+            const file = new File([blob], "dui.jpg", { type: "image/jpeg" });
+            const dt = new DataTransfer(); dt.items.add(file); 
+            inputMobile.files = dt.files; // Guardar en el input que se envía a Python
+            
+            // Ocultar botones y mostrar mensaje de éxito
+            contenedorIOS.style.display = 'none';
+            contenedorAndroid.style.display = 'none';
+            mensajeFoto.style.display = "block"; 
+            
+            modalRecorte.hide();
+        }, 'image/jpeg', 0.9);
+    });
+
+    // --- ENVÍO ASÍNCRONO ---
+    async function procesarFormulario(e, formId) {
+        e.preventDefault();
+        const form = document.getElementById(formId);
+        const btn = form.querySelector('button[type="submit"]');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = "Procesando..."; btn.disabled = true;
+
+        try {
+            const response = await fetch(form.action, { method: 'POST', body: new FormData(form) });
+            const ticketNum = form.querySelector('input[name="ticket"]').value;
+
+            if (response.ok) {
+                actualizarEstadoConexion(true);
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                
+                Swal.fire({ 
+                    icon: 'success', 
+                    title: '¡Generado!', 
+                    text: `Abriendo Ticket #${ticketNum}...`, 
+                    timer: 1500, 
+                    showConfirmButton: false 
+                });
+                
+                setTimeout(() => { window.open(url, '_blank'); form.reset(); if(formId==='form-acta') limpiarUIActa(); }, 800);
+            } else {
+                const errorMsg = await response.text();
+                
+                if (response.status === 404 || errorMsg.includes("No se pudieron obtener los datos")) {
+                    actualizarEstadoConexion(false);
+                }
+
+                Swal.fire({ icon: 'warning', title: 'Aviso', text: errorMsg, confirmButtonColor: '#003366' });
+            }
+        } catch (err) {
+            actualizarEstadoConexion(false);
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Error de conexión con el servidor local.' });
+        } finally { btn.innerHTML = originalText; btn.disabled = false; }
+    }
+
+    function limpiarUIActa() {
+        // Limpiar Escritorio
+        dropZone.style = ""; 
+        dropzoneText.innerHTML = "<span style='font-size: 3rem;'>📁</span><br><h5 class='mt-2 mb-1 fw-bold'>Arrastra la imagen del DUI aquí</h5><p class='mb-0 text-muted'>o haz clic para buscar en tus archivos</p>";
+        inputDesktop.value = ""; 
+
+        // Limpiar Móvil
+        inputMobile.value = ""; 
+        imagenPrevia.src = "";
+        
+        // Volver a mostrar los botones correctos
+        mensajeFoto.style.display = "none";
+        if (esAndroid) {
+            contenedorAndroid.style.display = 'block';
+        } else {
+            contenedorIOS.style.display = 'block';
+        }
+        
+        if (cropper) { 
+            cropper.destroy(); 
+            cropper = null; 
+        }
+    }
+
+    document.getElementById('form-vineta').addEventListener('submit', (e) => procesarFormulario(e, 'form-vineta'));
+    document.getElementById('form-acta').addEventListener('submit', (e) => procesarFormulario(e, 'form-acta'));
+</script>
+</body>
+</html>

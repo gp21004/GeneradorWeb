@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel de Administración - Proveedores</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 40px; background-color: #f4f7f6; }
+        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h2, h3 { color: #2c3e50; }
+        h2 { border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        
+        /* Alertas (Flash) */
+        .alert { background-color: #d4edda; color: #155724; padding: 15px; border-radius: 5px; margin-bottom: 20px; border-left: 5px solid #28a745; font-weight: bold; }
+        
+        /* Formulario Estilizado */
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .input-group { display: flex; flex-direction: column; }
+        label { font-size: 12px; font-weight: bold; color: #7f8c8d; margin-bottom: 5px; text-transform: uppercase; }
+        input { padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        
+        /* Botones */
+        button { border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-add { background: #27ae60; color: white; }
+        .btn-add:hover { background: #219150; }
+        .btn-edit { background: #f39c12; color: white; }
+        .btn-edit:hover { background: #d68910; }
+        .btn-cancel { background: #95a5a6; color: white; margin-left: 10px; }
+        .btn-cancel:hover { background: #7f8c8d; }
+        .btn-danger { background: #e74c3c; color: white; padding: 6px 12px; }
+        .btn-danger:hover { background: #c0392b; }
+        .btn-action { background: #3498db; color: white; padding: 6px 12px; }
+        .btn-upload { background: #8e44ad; color: white; }
+
+        /* Tabla */
+        .table-container { margin-top: 20px; overflow-x: auto; max-height: 500px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+        th { background: #34495e; color: white; padding: 12px; text-align: left; position: sticky; top: 0; }
+        td { padding: 10px; border-bottom: 1px solid #eee; }
+        tr:hover { background-color: #f1c40f33; }
+        
+        .upload-section { background: #ecf0f1; padding: 20px; border-radius: 8px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;}
+    </style>
+</head>
+<body>
+
+<div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-bottom: 20px;">
+        <h2 style="border: none; padding: 0; margin: 0;">🛠️ Gestión de Proveedores</h2>
+        <a href="/logout" style="background: #e74c3c; color: white; padding: 8px 15px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 14px;">🚪 Cerrar Sesión</a>
+    </div>
+        <div>
+            <h4 style="margin-top: 0;">Cargar / Reemplazar Excel Completo</h4>
+            <p style="font-size: 13px; color: #7f8c8d; margin-bottom: 0;">Sube un archivo .xlsx para sobrescribir toda la base de datos actual.</p>
+        </div>
+        <form action="/actualizar_excel_completo" method="POST" enctype="multipart/form-data" onsubmit="return confirm('ATENCIÓN: ¿Estás seguro de que quieres reemplazar TODA la base de datos? Esto no se puede deshacer.');">
+            <input type="file" name="excel_file" accept=".xlsx, .xls" required style="background: white;">
+            <button type="submit" class="btn-upload">📂 Subir y Reemplazar</button>
+        </form>
+    </div>
+
+    <h3 id="form-titulo">➕ Agregar Nuevo Registro</h3>
+    <form id="data-form" action="/api/agregar_fila" method="POST" onsubmit="return confirm('¿Estás seguro de guardar estos datos?');">
+        <div class="form-grid">
+            {% for col in columnas %}
+            <div class="input-group">
+                <label>{{ col }}</label>
+                <input type="text" name="{{ col }}" id="input-{{ loop.index0 }}" placeholder="Escriba {{ col }}...">
+            </div>
+            {% endfor %}
+        </div>
+        <button type="submit" id="btn-submit" class="btn-add">➕ Insertar en Excel</button>
+        <button type="button" id="btn-cancel" class="btn-cancel" style="display:none;" onclick="cancelarEdicion()">❌ Cancelar Edición</button>
+    </form>
+
+    <hr style="margin: 40px 0;">
+
+    <h3>📋 Base de Datos Actual (Últimos 100 registros)</h3>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>ACCIONES</th>
+                    {% for col in columnas %}
+                    <th>{{ col }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for fila in datos %}
+                <tr>
+                    <td style="min-width: 120px;">
+                        <button class="btn-action" onclick='editarFila({{ fila.index }}, {{ fila | tojson | safe }})'>✏️</button>
+                        
+                        <form action="/api/eliminar_fila/{{ fila.index }}" method="POST" style="display:inline;" onsubmit="return confirm('⚠️ ¿Estás seguro de ELIMINAR esta fila permanentemente?');">
+                            <button type="submit" class="btn-danger">🗑️</button>
+                        </form>
+                    </td>
+                    
+                    {% for col in columnas %}
+                    <td>{{ fila[col] }}</td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div style="margin-top: 30px;">
+        <a href="/" style="text-decoration: none; color: #3498db; font-weight: bold;">⬅️ Volver al Generador de Viñetas</a>
+    </div>
+</div>
+
+<script>
+    // Guardamos los nombres de las columnas desde Python hacia JS
+    const columnas = {{ columnas | tojson }};
+
+    function editarFila(idx, filaDatos) {
+        // 1. Cambiamos los textos y colores del formulario
+        document.getElementById('form-titulo').innerText = "✏️ Editar Registro (Fila #" + idx + ")";
+        document.getElementById('data-form').action = "/api/editar_fila/" + idx;
+        
+        let btnSubmit = document.getElementById('btn-submit');
+        btnSubmit.innerText = "💾 Guardar Cambios";
+        btnSubmit.className = "btn-edit"; // Lo pone naranja
+        
+        document.getElementById('btn-cancel').style.display = "inline-block"; // Muestra botón cancelar
+
+        // 2. Llenamos los inputs con los datos de la fila que se tocó
+        columnas.forEach((col, i) => {
+            document.getElementById('input-' + i).value = filaDatos[col] || '';
+        });
+
+        // 3. Hacemos un scroll suave hacia arriba para que el usuario vea el formulario
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function cancelarEdicion() {
+        // Regresamos el formulario a "Modo Agregar"
+        document.getElementById('form-titulo').innerText = "➕ Agregar Nuevo Registro";
+        document.getElementById('data-form').action = "/api/agregar_fila";
+        
+        let btnSubmit = document.getElementById('btn-submit');
+        btnSubmit.innerText = "➕ Insertar en Excel";
+        btnSubmit.className = "btn-add"; // Lo regresa a verde
+        
+        document.getElementById('btn-cancel').style.display = "none";
+        document.getElementById('data-form').reset(); // Limpia los campos
+    }
+</script>
+
+</body>
+</html>

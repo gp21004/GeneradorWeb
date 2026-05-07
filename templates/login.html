@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Acceso Restringido - Sistema CREST</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        
+        .login-card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.1); width: 100%; max-width: 380px; text-align: center; }
+        
+        .login-card h2 { margin-top: 0; margin-bottom: 5px; color: #2c3e50; font-size: 24px; }
+        .login-card p { color: #7f8c8d; font-size: 14px; margin-bottom: 30px; }
+        
+        .input-group { margin-bottom: 20px; text-align: left; }
+        .input-group label { display: block; font-size: 13px; font-weight: bold; color: #34495e; margin-bottom: 8px; text-transform: uppercase; }
+        .input-group input { width: 100%; padding: 12px; border: 1px solid #ccd1d9; border-radius: 6px; box-sizing: border-box; font-size: 15px; transition: border-color 0.3s; }
+        .input-group input:focus { outline: none; border-color: #3498db; box-shadow: 0 0 5px rgba(52,152,219,0.3); }
+        
+        .btn-login { width: 100%; padding: 14px; background: #2c3e50; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+        .btn-login:hover { background: #1a252f; }
+        
+        /* Estilo para errores */
+        .alert { background-color: #f8d7da; color: #721c24; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; border-left: 4px solid #e74c3c; text-align: left; }
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+        <h2>🛡️ Portal de Administración</h2>
+        <p>Ingresa tus credenciales para continuar</p>
+
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            {% for message in messages %}
+              <div class="alert">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <form action="/login" method="POST">
+            <div class="input-group">
+                <label>Usuario</label>
+                <input type="text" name="usuario" required placeholder="Ej: admin">
+            </div>
+            <div class="input-group">
+                <label>Contraseña</label>
+                <input type="password" name="password" required placeholder="••••••••">
+            </div>
+            <button type="submit" class="btn-login">Iniciar Sesión</button>
+        </form>
+
+        <div style="margin-top: 25px;">
+            <a href="/" style="text-decoration: none; color: #95a5a6; font-size: 13px; font-weight: bold;">⬅️ Volver al Generador de Viñetas</a>
+        </div>
+    </div>
+
+</body>
+</html>

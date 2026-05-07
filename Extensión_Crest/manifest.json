@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "Sincronizador CREST",
+  "version": "1.0",
+  "description": "Extrae la sesión de CREST y la envía a Python",
+  "permissions": [
+    "cookies"
+  ],
+  "host_permissions": [
+    "https://soporte-crest.mined.gob.sv/*",
+    "http://127.0.0.1:5000/*",
+    "http://localhost:5000/*"
+  ],
+  "action": {
+    "default_title": "Sincronizar Cookie CREST",
+    "default_icon": "icon.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}
