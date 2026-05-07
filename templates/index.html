@@ -87,7 +87,10 @@
                 <form action="/procesar_vineta" method="POST" id="form-vineta">
                     <div class="mb-3">
                         <label class="form-label fw-bold">Número de Ticket:</label>
-                        <input type="text" class="form-control form-control-lg solo-numeros" name="ticket" placeholder="Ej. 478356" required oninput="this.value = this.value.replace(/[^0-9]/g, '');">
+                        <div class="input-group">
+                            <input type="text" class="form-control form-control-lg solo-numeros" name="ticket" id="ticket_vineta" placeholder="Ej. 478356" required oninput="this.value = this.value.replace(/[^0-9]/g, '');">
+                            <button class="btn btn-outline-secondary fw-bold" type="button" id="btn-comprobar-ticket">Comprobar Ticket</button>
+                        </div>
                     </div>
                     <div class="mb-3"><label class="form-label fw-bold">Accesorios incluidos:</label>
                         <div class="d-flex flex-wrap gap-3 p-3 bg-light rounded border">
@@ -373,6 +376,60 @@
             cropper.destroy(); 
             cropper = null; 
         }
+    }
+
+    const btnComprobar = document.getElementById('btn-comprobar-ticket');
+    if (btnComprobar) {
+        btnComprobar.addEventListener('click', async () => {
+            const ticketInput = document.getElementById('ticket_vineta');
+            const ticketVal = ticketInput.value.trim();
+            if (!ticketVal) {
+                Swal.fire({ icon: 'warning', title: 'Aviso', text: 'Ingrese un número de ticket primero.', confirmButtonColor: '#003366' });
+                return;
+            }
+            
+            const originalText = btnComprobar.innerHTML;
+            btnComprobar.innerHTML = '⏳';
+            btnComprobar.disabled = true;
+            
+            try {
+                const response = await fetch(`/api/comprobar_ticket/${ticketVal}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.status === 'success') {
+                        document.getElementById('caja').checked = data.caja;
+                        document.getElementById('cargador').checked = data.cargador;
+                        document.getElementById('funda').checked = data.funda;
+                        
+                        let encontrados = [];
+                        if(data.caja) encontrados.push('Caja');
+                        if(data.cargador) encontrados.push('Cargador');
+                        if(data.funda) encontrados.push('Funda');
+                        
+                        let msg = encontrados.length > 0 
+                            ? `Accesorios detectados: ${encontrados.join(', ')}` 
+                            : 'No se detectaron accesorios en el ticket.';
+                            
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Comprobación completada',
+                            text: msg,
+                            timer: 3000,
+                            showConfirmButton: false
+                        });
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'Error', text: data.mensaje || 'Error desconocido', confirmButtonColor: '#003366' });
+                    }
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo obtener la información del ticket. Revisa tu conexión o sesión.', confirmButtonColor: '#003366' });
+                }
+            } catch (error) {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Error de conexión con el servidor local.', confirmButtonColor: '#003366' });
+            } finally {
+                btnComprobar.innerHTML = originalText;
+                btnComprobar.disabled = false;
+            }
+        });
     }
 
     document.getElementById('form-vineta').addEventListener('submit', (e) => procesarFormulario(e, 'form-vineta'));

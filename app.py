@@ -120,6 +120,18 @@ def extraer_datos_web(ticket_id):
                     texto_acta = "<br/><br/>".join(lineas)
                     break 
 
+        # Extracción de accesorios del comprobante
+        accesorios_recibidos = ""
+        modal_comprobante = soup.find('div', id='v_comprobanteModal')
+        if modal_comprobante:
+            h5_tags = modal_comprobante.find_all('h5')
+            for h5 in h5_tags:
+                texto = h5.get_text()
+                if "El equipo ha sido recibido con:" in texto:
+                    accesorios_recibidos = texto
+                    break
+
+        datos["Accesorios_Recibidos"] = accesorios_recibidos
         datos["TextoActa"] = texto_acta
         datos["TituloActa"] = titulo_acta
         return datos
@@ -406,6 +418,23 @@ def procesar_acta():
     img_file.save(temp_img)
     pdf_path = generar_pdf_acta(d, temp_img)
     return send_file(pdf_path, as_attachment=False, download_name=f"Acta_{ticket}.pdf")
+
+@app.route('/api/comprobar_ticket/<ticket_id>', methods=['GET'])
+def comprobar_ticket(ticket_id):
+    d = extraer_datos_web(ticket_id)
+    if isinstance(d, str):
+        return jsonify({"status": "error", "mensaje": f"Error de sincronización o sesión: {d}"}), 400
+    if not d or d == "ERROR_NA":
+        return jsonify({"status": "error", "mensaje": "Ticket no encontrado."}), 404
+        
+    acc = d.get("Accesorios_Recibidos", "").upper()
+    
+    return jsonify({
+        "status": "success",
+        "cargador": "CARGADOR" in acc,
+        "caja": "CAJA" in acc,
+        "funda": "FUNDA" in acc
+    })
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
