@@ -421,7 +421,12 @@
                         Swal.fire({ icon: 'error', title: 'Error', text: data.mensaje || 'Error desconocido', confirmButtonColor: '#003366' });
                     }
                 } else {
-                    Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo obtener la información del ticket. Revisa tu conexión o sesión.', confirmButtonColor: '#003366' });
+                    let errorMsg = 'No se pudo obtener la información del ticket. Revisa tu conexión o sesión.';
+                    try {
+                        const errorData = await response.json();
+                        if (errorData.mensaje) errorMsg = errorData.mensaje;
+                    } catch (e) {}
+                    Swal.fire({ icon: 'error', title: 'Error', text: errorMsg, confirmButtonColor: '#003366' });
                 }
             } catch (error) {
                 Swal.fire({ icon: 'error', title: 'Error', text: 'Error de conexión con el servidor local.', confirmButtonColor: '#003366' });

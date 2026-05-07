@@ -65,9 +65,15 @@ def extraer_datos_web(ticket_id):
     try:
         r = requests.get(url, cookies=cookies, timeout=10)
         
+        if r.status_code == 404:
+            return "ERROR_NA"
+            
         # Si redirige al login o da error de sesión
-        if r.status_code != 200 or "Iniciar sesión" in r.text:
+        if "Iniciar sesión" in r.text:
             return "ERROR_SESION"
+            
+        if r.status_code != 200:
+            return "ERROR_NA"
         
         soup = BeautifulSoup(r.text, 'html.parser')
         datos = {"Ticket": ticket_id}
@@ -87,7 +93,7 @@ def extraer_datos_web(ticket_id):
         })
 
         # Verificar si se pudieron leer los datos básicos
-        if datos["Serie"] == "N/A":
+        if datos["Estado"] in ["N/A", ""] or datos["Serie"] in ["N/A", ""]:
             return "ERROR_NA"
 
         # Lógica para extraer el texto del Acta (Sustitución/Reemplazo)
@@ -397,10 +403,14 @@ def procesar_vineta():
     obs = ", ".join(acc) if acc else "SOLO EQUIPO"
 
     d = extraer_datos_web(ticket)
-    if d == "NO_COOKIE": return "Error: No sincronizado.", 400
-    if d == "ERROR_SESION": return "Error: Sesión caducada.", 401
-    if not d or d == "ERROR_NA": return "Error: Ticket no encontrado.", 404
+    if d == "ERROR_NA": return "Error: Ticket no encontrado o no existe.", 404
+    if isinstance(d, str): return f"Error de sesión o conexión: {d}", 400
+    if not d: return "Error: Ticket no encontrado o no existe.", 404
     
+    estado = d.get("Estado", "").upper()
+    if "PROCESO DE GARANT" not in estado:
+        return f"Error: El ticket debe estar en 'Proceso de garantía'. Estado actual: {estado.title()}", 400
+        
     prov = obtener_proveedor(d['Modelo'])
     pdf_path = generar_pdf_vineta(d, obs, prov, detalle)
     return send_file(pdf_path, as_attachment=False, download_name=f"Vineta_{ticket}.pdf")
@@ -412,7 +422,15 @@ def procesar_acta():
     if not img_file: return "Error: Falta DUI.", 400
     
     d = extraer_datos_web(ticket)
-    if not d or not d.get("TextoActa"): return "Error: No hay acta disponible.", 404
+    if d == "ERROR_NA": return "Error: Ticket no encontrado o no existe.", 404
+    if isinstance(d, str): return f"Error de sesión o conexión: {d}", 400
+    if not d: return "Error: Ticket no encontrado o no existe.", 404
+    
+    estado = d.get("Estado", "").upper()
+    if "PROCESO DE GARANT" not in estado:
+        return f"Error: El ticket debe estar en 'Proceso de garantía'. Estado actual: {estado.title()}", 400
+
+    if not d.get("TextoActa"): return "Error: No hay acta disponible.", 404
 
     temp_img = os.path.join(tempfile.gettempdir(), secure_filename(img_file.filename))
     img_file.save(temp_img)
@@ -422,10 +440,16 @@ def procesar_acta():
 @app.route('/api/comprobar_ticket/<ticket_id>', methods=['GET'])
 def comprobar_ticket(ticket_id):
     d = extraer_datos_web(ticket_id)
+    if d == "ERROR_NA":
+        return jsonify({"status": "error", "mensaje": "Ticket no encontrado o no existe."}), 404
     if isinstance(d, str):
         return jsonify({"status": "error", "mensaje": f"Error de sincronización o sesión: {d}"}), 400
-    if not d or d == "ERROR_NA":
-        return jsonify({"status": "error", "mensaje": "Ticket no encontrado."}), 404
+    if not d:
+        return jsonify({"status": "error", "mensaje": "Ticket no encontrado o no existe."}), 404
+        
+    estado = d.get("Estado", "").upper()
+    if "PROCESO DE GARANT" not in estado:
+        return jsonify({"status": "error", "mensaje": f"El ticket debe estar en 'Proceso de garantía'. Estado actual: {estado.title()}"}), 400
         
     acc = d.get("Accesorios_Recibidos", "").upper()
     
