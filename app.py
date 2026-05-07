@@ -425,10 +425,6 @@ def procesar_acta():
     if d == "ERROR_NA": return "Error: Ticket no encontrado o no existe.", 404
     if isinstance(d, str): return f"Error de sesión o conexión: {d}", 400
     if not d: return "Error: Ticket no encontrado o no existe.", 404
-    
-    estado = d.get("Estado", "").upper()
-    if "PROCESO DE GARANT" not in estado:
-        return f"Error: El ticket debe estar en 'Proceso de garantía'. Estado actual: {estado.title()}", 400
 
     if not d.get("TextoActa"): return "Error: No hay acta disponible.", 404
 
