@@ -312,9 +312,48 @@
         }, 'image/jpeg', 0.9);
     });
 
+    // --- AUTO-RENOVACIÓN DE SESIÓN ---
+    function intentarAutoRenovar(retryCallback) {
+        return new Promise((resolve) => {
+            // Se abre la ventana con tamaño 1x1 y posicionada fuera del área visible (abajo a la derecha)
+            let win = window.open('https://soporte-crest.mined.gob.sv/soportev2/', 'Renovador', 'width=10,height=10,left=9999,top=9999');
+            
+            if (!win || win.closed || typeof win.closed == 'undefined') {
+                // El navegador bloqueó el popup
+                Swal.fire({ 
+                    icon: 'warning', 
+                    title: 'Ventana bloqueada', 
+                    html: 'El navegador bloqueó la auto-renovación.<br><br>Por favor, haz clic en el botón de abajo para iniciar sesión, espera 3 segundos y vuelve a intentar.<br><br><a href="https://soporte-crest.mined.gob.sv/soportev2/" target="_blank" class="btn btn-primary" onclick="Swal.close()">Renovar Manualmente</a>', 
+                    showConfirmButton: false 
+                });
+                resolve();
+                return;
+            }
+
+            Swal.fire({
+                title: 'Renovando Sesión...',
+                html: 'Abriendo el portal brevemente para actualizar la sesión.<br>Por favor espere unos segundos.',
+                icon: 'info',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
+            // Esperar 4.5 segundos, cerrar popup y ejecutar reintento
+            setTimeout(async () => {
+                if (win && !win.closed) {
+                    win.close();
+                }
+                Swal.close();
+                await retryCallback();
+                resolve();
+            }, 4500);
+        });
+    }
+
     // --- ENVÍO ASÍNCRONO ---
-    async function procesarFormulario(e, formId) {
-        e.preventDefault();
+    async function procesarFormulario(e, formId, isRetry = false) {
+        if (e) e.preventDefault();
         const form = document.getElementById(formId);
         const btn = form.querySelector('button[type="submit"]');
         const originalText = btn.innerHTML;
@@ -340,8 +379,23 @@
                 
                 setTimeout(() => { window.open(url, '_blank'); form.reset(); if(formId==='form-acta') limpiarUIActa(); }, 800);
             } else {
+                if (response.status === 401) {
+                    actualizarEstadoConexion(false);
+                    btn.innerHTML = originalText; btn.disabled = false;
+                    
+                    if (!isRetry) {
+                        return await intentarAutoRenovar(() => procesarFormulario(null, formId, true));
+                    } else {
+                        return Swal.fire({ 
+                            icon: 'error', 
+                            title: 'Sesión Desconectada', 
+                            html: 'No se pudo renovar automáticamente.<br>Puede que el navegador esté bloqueando popups.<br><br><a href="https://soporte-crest.mined.gob.sv/" target="_blank" class="btn btn-primary" onclick="Swal.close()">Haga clic aquí para iniciar sesión manualmente</a>', 
+                            showConfirmButton: false 
+                        });
+                    }
+                }
+
                 const errorMsg = await response.text();
-                
                 if (response.status === 404 || errorMsg.includes("No se pudieron obtener los datos")) {
                     actualizarEstadoConexion(false);
                 }
@@ -351,7 +405,12 @@
         } catch (err) {
             actualizarEstadoConexion(false);
             Swal.fire({ icon: 'error', title: 'Error', text: 'Error de conexión con el servidor local.' });
-        } finally { btn.innerHTML = originalText; btn.disabled = false; }
+        } finally { 
+            if (btn.innerHTML === "Procesando...") { 
+                btn.innerHTML = originalText; 
+                btn.disabled = false; 
+            } 
+        }
     }
 
     function limpiarUIActa() {
@@ -381,6 +440,10 @@
     const btnComprobar = document.getElementById('btn-comprobar-ticket');
     if (btnComprobar) {
         btnComprobar.addEventListener('click', async () => {
+            await ejecutarComprobacion(false);
+        });
+        
+        async function ejecutarComprobacion(isRetry) {
             const ticketInput = document.getElementById('ticket_vineta');
             const ticketVal = ticketInput.value.trim();
             if (!ticketVal) {
@@ -394,6 +457,24 @@
             
             try {
                 const response = await fetch(`/api/comprobar_ticket/${ticketVal}`);
+                
+                if (response.status === 401) {
+                    actualizarEstadoConexion(false);
+                    btnComprobar.innerHTML = originalText;
+                    btnComprobar.disabled = false;
+                    
+                    if (!isRetry) {
+                        return await intentarAutoRenovar(() => ejecutarComprobacion(true));
+                    } else {
+                        return Swal.fire({ 
+                            icon: 'error', 
+                            title: 'Sesión Desconectada', 
+                            html: 'No se pudo renovar automáticamente.<br>Puede que el navegador esté bloqueando popups.<br><br><a href="https://soporte-crest.mined.gob.sv/" target="_blank" class="btn btn-primary" onclick="Swal.close()">Haga clic aquí para iniciar sesión manualmente</a>', 
+                            showConfirmButton: false 
+                        });
+                    }
+                }
+                
                 if (response.ok) {
                     const data = await response.json();
                     if (data.status === 'success') {
@@ -431,10 +512,12 @@
             } catch (error) {
                 Swal.fire({ icon: 'error', title: 'Error', text: 'Error de conexión con el servidor local.', confirmButtonColor: '#003366' });
             } finally {
-                btnComprobar.innerHTML = originalText;
-                btnComprobar.disabled = false;
+                if (btnComprobar.innerHTML === '⏳') {
+                    btnComprobar.innerHTML = originalText;
+                    btnComprobar.disabled = false;
+                }
             }
-        });
+        }
     }
 
     document.getElementById('form-vineta').addEventListener('submit', (e) => procesarFormulario(e, 'form-vineta'));

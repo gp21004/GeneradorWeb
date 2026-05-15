@@ -404,7 +404,7 @@ def procesar_vineta():
 
     d = extraer_datos_web(ticket)
     if d == "ERROR_NA": return "Error: Ticket no encontrado o no existe.", 404
-    if isinstance(d, str): return f"Error de sesión o conexión: {d}", 400
+    if isinstance(d, str): return f"Error de sesión o conexión: {d}", 401
     if not d: return "Error: Ticket no encontrado o no existe.", 404
     
     estado = d.get("Estado", "").upper()
@@ -423,7 +423,7 @@ def procesar_acta():
     
     d = extraer_datos_web(ticket)
     if d == "ERROR_NA": return "Error: Ticket no encontrado o no existe.", 404
-    if isinstance(d, str): return f"Error de sesión o conexión: {d}", 400
+    if isinstance(d, str): return f"Error de sesión o conexión: {d}", 401
     if not d: return "Error: Ticket no encontrado o no existe.", 404
 
     if not d.get("TextoActa"): return "Error: No hay acta disponible.", 404
@@ -439,7 +439,7 @@ def comprobar_ticket(ticket_id):
     if d == "ERROR_NA":
         return jsonify({"status": "error", "mensaje": "Ticket no encontrado o no existe."}), 404
     if isinstance(d, str):
-        return jsonify({"status": "error", "mensaje": f"Error de sincronización o sesión: {d}"}), 400
+        return jsonify({"status": "error", "mensaje": f"Error de sincronización o sesión: {d}"}), 401
     if not d:
         return jsonify({"status": "error", "mensaje": "Ticket no encontrado o no existe."}), 404
         

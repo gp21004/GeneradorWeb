@@ -1,15 +1,17 @@
 {
   "manifest_version": 3,
-  "name": "Sincronizador CREST",
-  "version": "1.0",
-  "description": "Extrae la sesión de CREST y la envía a Python",
+  "name": "Sincronizador CREST Automático",
+  "version": "1.1",
+  "description": "Extrae la sesión de CREST y la envía a Python automáticamente",
   "permissions": [
-    "cookies"
+    "cookies",
+    "tabs"
   ],
   "host_permissions": [
     "https://soporte-crest.mined.gob.sv/*",
     "http://127.0.0.1:5000/*",
-    "http://localhost:5000/*"
+    "http://localhost:5000/*",
+    "https://hypnoses-spender-sliver.ngrok-free.dev/*"
   ],
   "action": {
     "default_title": "Sincronizar Cookie CREST",
